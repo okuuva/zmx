@@ -10,21 +10,24 @@
     let
       flake-utils = zig2nix.inputs.flake-utils;
     in
-    (flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ] (
+    (flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ] (
       system:
       let
         env = zig2nix.outputs.zig-env.${system} {
           zig = zig2nix.outputs.packages.${system}.zig-0_15_2;
         };
+        isLinux = env.pkgs.stdenv.isLinux;
       in
       with builtins;
       with env.pkgs.lib;
       let
-        zmx-package = env.package {
+        zmx-package = env.package ({
           src = cleanSource ./.;
           zigBuildFlags = [ "-Doptimize=ReleaseSafe" ];
-          zigPreferMusl = true;
-        };
+          zigPreferMusl = isLinux;
+        } // optionalAttrs (!isLinux) {
+          zigTarget = "native";
+        });
       in
       {
         packages = {
